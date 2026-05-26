@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compass Group vs Sodexo — Institutional Financial Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0" integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3248;
+      --cpg: #3b82f6;
+      --cpg-light: rgba(59,130,246,0.18);
+      --sdx: #f59e0b;
+      --sdx-light: rgba(245,158,11,0.18);
+      --green: #22c55e;
+      --red: #ef4444;
+      --muted: #64748b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #a78bfa;
+      --radius: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── TOP NAV ─────────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo-area { display: flex; align-items: center; gap: 12px; }
+    .logo-area h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-area span { color: var(--muted); font-size: 12px; }
+    .badge { background: #1e3a5f; color: var(--cpg); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+    .badge.sdx { background: #3d2c10; color: var(--sdx); }
+
+    .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filters label { font-size: 11px; color: var(--text-dim); }
+    select, .btn-toggle {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+    select:hover, .btn-toggle:hover { border-color: var(--cpg); }
+    .btn-group { display: flex; gap: 2px; }
+    .btn-toggle { padding: 5px 12px; }
+    .btn-toggle.active { background: var(--cpg); color: #fff; border-color: var(--cpg); }
+    .btn-toggle.sdx-active { background: var(--sdx); color: #000; border-color: var(--sdx); }
+
+    /* ── LAYOUT ──────────────────────────────────────────────────────── */
+    .main { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+    /* ── SECTION TABS ─────────────────────────────────────────────────── */
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+    .tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s;
+    }
+    .tab.active { color: var(--cpg); border-bottom-color: var(--cpg); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── KPI ROW ─────────────────────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--cpg);
+    }
+    .kpi-card.sdx::before { background: var(--sdx); }
+    .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 6px; }
+    .kpi-value { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+    .kpi-sub { font-size: 11px; color: var(--text-dim); }
+    .kpi-change { font-size: 11px; font-weight: 600; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .kpi-change.pos { color: var(--green); }
+    .kpi-change.neg { color: var(--red); }
+    .kpi-co { font-size: 10px; color: var(--muted); }
+
+    /* ── CHART CARDS ──────────────────────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 18px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .chart-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+    .chart-card-title { font-size: 13px; font-weight: 600; }
+    .chart-card-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .chart-card-note {
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+    .chart-wrap { position: relative; height: 230px; }
+    .chart-wrap.tall { height: 290px; }
+    .chart-wrap.short { height: 180px; }
+
+    /* ── TABLE ────────────────────────────────────────────────────────── */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .table-card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-card-title { font-size: 13px; font-weight: 600; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th {
+      padding: 9px 14px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 9px 14px; text-align: right; white-space: nowrap; }
+    tbody td:first-child { text-align: left; font-weight: 500; }
+    .co-cpg { color: var(--cpg); font-size: 10px; font-weight: 600; }
+    .co-sdx { color: var(--sdx); font-size: 10px; font-weight: 600; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .proj { color: var(--text-dim); font-style: italic; }
+
+    /* ── RISK GRID ─────────────────────────────────────────────────────── */
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .risk-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 14px;
+      border-left: 3px solid var(--red);
+    }
+    .risk-item.medium { border-left-color: var(--sdx); }
+    .risk-item.low { border-left-color: var(--green); }
+    .risk-item.info { border-left-color: var(--cpg); }
+    .risk-title { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+    .risk-body { font-size: 11px; color: var(--text-dim); }
+
+    /* ── SCENARIO TABLE ─────────────────────────────────────────────────── */
+    .scenario-label {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .s-bull { background: rgba(34,197,94,0.2); color: var(--green); }
+    .s-base { background: rgba(59,130,246,0.2); color: var(--cpg); }
+    .s-bear { background: rgba(239,68,68,0.2); color: var(--red); }
+
+    /* ── ESG METER ───────────────────────────────────────────────────────── */
+    .esg-col { display: flex; flex-direction: column; gap: 10px; }
+    .esg-row { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 10px; }
+    .esg-label { font-size: 11px; color: var(--text-dim); }
+    .esg-bar-bg { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+    .esg-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .esg-score { font-size: 12px; font-weight: 700; text-align: right; }
+
+    /* ── FOOTER ─────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 18px 28px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    footer strong { color: var(--text-dim); }
+
+    /* ── ANOMALY BADGE ───────────────────────────────────────────────────── */
+    .anomaly { color: var(--sdx); font-weight: 700; }
+    .tag {
+      display: inline-block;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .tag-e { background: rgba(34,197,94,0.15); color: var(--green); }
+    .tag-w { background: rgba(245,158,11,0.15); color: var(--sdx); }
+    .tag-r { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    @media (max-width: 700px) {
+      .main { padding: 12px; }
+      header { padding: 10px 14px; }
+      .kpi-value { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+<header>
+  <div class="logo-area">
+    <div>
+      <h1>Compass Group PLC &nbsp;vs&nbsp; Sodexo S.A.</h1>
+      <span>Institutional Financial Analysis &nbsp;·&nbsp; FY2023–2025 Historical &nbsp;|&nbsp; FY2026E–2028E Forward</span>
+    </div>
+    <span class="badge">CPG</span>
+    <span class="badge sdx">SDX</span>
+  </div>
+  <div class="filters">
+    <label>View</label>
+    <div class="btn-group">
+      <button class="btn-toggle active" id="btn-both" onclick="setView('both')">Both</button>
+      <button class="btn-toggle" id="btn-cpg" onclick="setView('cpg')">CPG only</button>
+      <button class="btn-toggle" id="btn-sdx" onclick="setView('sdx')">SDX only</button>
+    </div>
+    <label>Currency</label>
+    <select id="sel-currency" onchange="setCurrency(this.value)">
+      <option value="native">Native (USD / EUR)</option>
+      <option value="usd">USD (SDX @ 1.09)</option>
+    </select>
+    <label style="color:var(--muted);font-size:10px;">Data as of May 2026</label>
+  </div>
+</header>
+
+<!-- ══ MAIN ═════════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- NAV TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('overview')">Overview</div>
+    <div class="tab" onclick="showTab('income')">Income Statement</div>
+    <div class="tab" onclick="showTab('balance')">Balance Sheet</div>
+    <div class="tab" onclick="showTab('forecast')">Forecast & Scenarios</div>
+    <div class="tab" onclick="showTab('peer')">Peer Benchmarking</div>
+    <div class="tab" onclick="showTab('esg')">ESG & Risk</div>
+  </div>
+
+  <!-- ═══ TAB: OVERVIEW ═══════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panel-overview">
+
+    <!-- KPIs -->
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <!-- Charts row 1 -->
+    <div class="grid-2" style="margin-top:18px;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Revenue Trend</div>
+            <div class="chart-card-sub">FY2023–2028E &nbsp;·&nbsp; <span class="co-cpg">CPG USD $m</span> &nbsp;|&nbsp; <span class="co-sdx">SDX EUR €m</span></div>
+          </div>
+          <span class="chart-card-note">Shaded = forecast</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-revenue"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">EBITDA Margin %</div>
+            <div class="chart-card-sub">Underlying operating basis</div>
+          </div>
+          <span class="chart-card-note">vs Industry Avg 8.2%</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-ebitda-margin"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="grid-2" style="margin-top:18px;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Net Debt / EBITDA</div>
+            <div class="chart-card-sub">Leverage ratio — lower is better</div>
+          </div>
+          <span class="chart-card-note">2.0x = investment-grade comfort</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-leverage"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Free Cash Flow</div>
+            <div class="chart-card-sub">Operating CF minus CapEx</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-fcf"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Summary table -->
+    <div class="table-card" style="margin-top:18px;">
+      <div class="table-card-header">
+        <div class="table-card-title">Key Metrics Summary — All Years</div>
+        <span style="font-size:11px;color:var(--muted);">CPG = USD $m &nbsp;|&nbsp; SDX = EUR €m &nbsp;|&nbsp; E = Estimate</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Co.</th>
+              <th>FY2023</th>
+              <th>FY2024</th>
+              <th>FY2025</th>
+              <th>FY2026E</th>
+              <th>FY2027E</th>
+              <th>FY2028E</th>
+            </tr>
+          </thead>
+          <tbody id="summary-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /overview -->
+
+  <!-- ═══ TAB: INCOME STATEMENT ═══════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-income">
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Revenue &amp; Operating Profit</div>
+            <div class="chart-card-sub">Compass Group (USD $m)</div>
+          </div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-cpg-is"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Revenue &amp; Operating Profit</div>
+            <div class="chart-card-sub">Sodexo (EUR €m)</div>
+          </div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-sdx-is"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:18px;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Margin Waterfall</div>
+            <div class="chart-card-sub">Gross → EBITDA → EBIT → Net Margin (FY2025)</div>
+          </div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-margins"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">EPS &amp; DPS Trend</div>
+            <div class="chart-card-sub">Compass Group — GBP pence (reported basis)</div>
+          </div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-eps"></canvas></div>
+      </div>
+    </div>
+    <!-- Anomaly alerts -->
+    <div class="chart-card" style="margin-top:18px;">
+      <div class="chart-card-header"><div class="chart-card-title">⚠️ Anomaly Detection &amp; Narrative</div></div>
+      <div class="risk-grid" id="anomaly-grid"></div>
+    </div>
+  </div><!-- /income -->
+
+  <!-- ═══ TAB: BALANCE SHEET ══════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-balance">
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Asset Composition (FY2025)</div>
+          <div class="chart-card-sub">Compass Group</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-cpg-assets"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Asset Composition (FY2025)</div>
+          <div class="chart-card-sub">Sodexo — excl. Pluxee (divested Jan 2024)</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-sdx-assets"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:18px;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Net Debt Composition</div>
+          <div class="chart-card-sub">Gross debt, lease liabilities, cash &amp; equivalents</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-debt"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Working Capital Efficiency</div>
+          <div class="chart-card-sub">DSO, DPO, Cash Conversion (days)</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-wc"></canvas></div>
+      </div>
+    </div>
+  </div><!-- /balance -->
+
+  <!-- ═══ TAB: FORECAST & SCENARIOS ═══════════════════════════════════ -->
+  <div class="tab-panel" id="panel-forecast">
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">CPG Revenue — Three Scenarios</div>
+          <div class="chart-card-sub">Bull / Base / Bear — FY2025–2028E</div></div>
+          <span class="chart-card-note">USD $m</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-cpg-scenario"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">SDX Revenue — Three Scenarios</div>
+          <div class="chart-card-sub">Bull / Base / Bear — FY2025–2028E</div></div>
+          <span class="chart-card-note">EUR €m</span>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-sdx-scenario"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Scenario table -->
+    <div class="table-card" style="margin-top:18px;">
+      <div class="table-card-header"><div class="table-card-title">Scenario Analysis — Key Assumptions &amp; Outcomes</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Revenue CAGR (CPG)</th>
+              <th>CPG Rev FY2028E</th>
+              <th>CPG EBITDA Mg</th>
+              <th>Revenue CAGR (SDX)</th>
+              <th>SDX Rev FY2028E</th>
+              <th>SDX EBITDA Mg</th>
+              <th>Key Driver</th>
+            </tr>
+          </thead>
+          <tbody id="scenario-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sensitivity -->
+    <div class="chart-card" style="margin-top:18px;">
+      <div class="chart-card-header">
+        <div><div class="chart-card-title">Sensitivity — CPG EBITDA vs Revenue Growth &amp; Margin</div>
+        <div class="chart-card-sub">FY2028E EBITDA ($m) heatmap — base case highlighted</div></div>
+      </div>
+      <div id="sensitivity-table" style="overflow-x:auto;padding-top:8px;"></div>
+    </div>
+  </div><!-- /forecast -->
+
+  <!-- ═══ TAB: PEER BENCHMARKING ═══════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-peer">
+    <div class="grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">Revenue Growth vs EBITDA Margin</div>
+          <div class="chart-card-sub">Bubble = Revenue size (FY2025)</div></div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-bubble"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">EV/EBITDA vs Net Debt/EBITDA</div>
+          <div class="chart-card-sub">Valuation vs leverage positioning</div></div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chart-peer-val"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-top:18px;">
+      <div class="chart-card-header"><div class="chart-card-title">Peer Comparison — Full Metrics Table</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Revenue ($m)</th>
+              <th>Rev Growth</th>
+              <th>EBITDA Mg</th>
+              <th>EBIT Mg</th>
+              <th>Net Mg</th>
+              <th>ND/EBITDA</th>
+              <th>ROCE %</th>
+              <th>EV/EBITDA</th>
+              <th>FCF Yield</th>
+            </tr>
+          </thead>
+          <tbody id="peer-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /peer -->
+
+  <!-- ═══ TAB: ESG & RISK ══════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panel-esg">
+    <div class="grid-3">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">ESG Radar — Compass Group</div>
+          <div class="chart-card-sub">Score out of 100</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-esg-cpg"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">ESG Radar — Sodexo</div>
+          <div class="chart-card-sub">Score out of 100</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-esg-sdx"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div><div class="chart-card-title">ESG Score Comparison</div>
+          <div class="chart-card-sub">CPG vs SDX vs Industry Avg</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-esg-compare"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ESG detail -->
+    <div class="grid-2" style="margin-top:18px;">
+      <div class="chart-card">
+        <div class="chart-card-header"><div class="chart-card-title">ESG Detail Scores</div></div>
+        <div style="padding-top:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="esg-bars"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header"><div class="chart-card-title">Risk Register</div></div>
+        <div class="risk-grid" id="risk-grid" style="padding-top:8px;"></div>
+      </div>
+    </div>
+  </div><!-- /esg -->
+
+</div><!-- /main -->
+
+<footer>
+  <strong>AI-Adaptive Financial Analyst</strong> &nbsp;·&nbsp;
+  Sources: Compass Group PLC Annual Reports FY2023–2025, Sodexo Universal Registration Documents FY2023–2025 &nbsp;·&nbsp;
+  CPG fiscal year ends Sep 30 | SDX fiscal year ends Aug 31 &nbsp;·&nbsp;
+  SDX FY2023 includes Pluxee (B&amp;R segment) pre-divestiture &nbsp;·&nbsp;
+  Forward estimates are model-generated; not investment advice.
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════════════════════════════════ */
+
+const FX_EUR_USD = 1.09; // EUR→USD (approx)
+
+// ── CPG (USD $m) ─────────────────────────────────────────────────────
+const CPG = {
+  name: 'Compass Group',
+  ticker: 'CPG',
+  currency: 'USD',
+  years:      ['FY2023','FY2024','FY2025'],
+  fcstYears:  ['FY2026E','FY2027E','FY2028E'],
+  allYears:   ['FY2023','FY2024','FY2025','FY2026E','FY2027E','FY2028E'],
+
+  // Income Statement
+  revenue:    [37907, 42002, 46070],
+  costOfSales:[33270, 36800, 40259], // ~87-88% revenue
+  grossProfit:[4637,  5202,  5811],
+  underlyingOP:[2543, 2880, 3294],  // Underlying OP margin ~6.7%, 6.9%, 7.1%
+  adjustItems: [-312, -298, -265],  // restructuring etc
+  statOP:      [2231, 2582, 3029],  // statutory OP
+  netFinance:  [-387, -395, -381],
+  pbt:         [1844, 2187, 2648],
+  tax:         [-437, -524, -636],  // ~24% ETR
+  netIncome:   [1407, 1663, 2012],
+  dna:         [1074, 1180, 1232],  // D&A from CFS
+  ebitda:      [3617, 4060, 4526],  // underlying OP + D&A
+  eps_p:       [68.4, 82.6, 100.8], // pence EPS underlying
+  dps_p:       [36.0, 42.2, 50.6], // pence DPS
+
+  // Balance Sheet
+  goodwill:   [8741, 9025, 9612],
+  intangibles:[1204, 1158, 1092],
+  ppe:        [1843, 1921, 2034],
+  rightOfUse: [2847, 2993, 3108],
+  currentAssets:[9205, 10118, 11234],
+  totalAssets:[26540, 28301, 30512],
+  grossDebt:  [6834, 6512, 5941],
+  leases:     [2847, 2993, 3108],
+  cash:       [2183, 2654, 3121],
+  netDebt:    [7498, 6851, 5928],  // gross+leases-cash
+  totalEquity:[5432, 6218, 7304],
+  dso:        [28, 27, 26],    // Days Sales Outstanding
+  dpo:        [44, 46, 47],    // Days Payable Outstanding
+  cashConv:   [16, 17, 21],    // days of cash conversion
+
+  // Cash Flow
+  opCF:       [3105, 3545, 4018],
+  capex:      [-1105,-1190,-1292],
+  fcf:        [2000, 2355, 2726],
+  dividends:  [-761, -858, -982],
+  buybacks:   [-620, -750, [-980]],
+
+  // Projections (base case)
+  rev_base:   [49756, 53487, 57231],
+  rev_bull:   [51500, 56200, 61900],
+  rev_bear:   [47900, 50600, 53700],
+  ebitda_base:[4920, 5358, 5824],
+  ebitda_bull:[5150, 5720, 6380],
+  ebitda_bear:[4620, 4890, 5130],
+  fcf_base:   [2950, 3250, 3620],
+
+  // Margins
+  gpm:        [12.2, 12.4, 12.6],  // gross
+  ebitdam:    [9.5, 9.7, 9.8],    // EBITDA %
+  ebitm:      [6.7, 6.9, 7.1],    // underlying OP %
+  netm:       [3.7, 4.0, 4.4],    // net %
+
+  // Leverage
+  nd_ebitda:  [2.07, 1.69, 1.31],
+  nd_ebitda_proj: [1.10, 0.90, 0.72],
+};
+
+// ── SDX (EUR €m) ─────────────────────────────────────────────────────
+const SDX = {
+  name: 'Sodexo',
+  ticker: 'SDX',
+  currency: 'EUR',
+  years:     ['FY2023','FY2024','FY2025'],
+  fcstYears: ['FY2026E','FY2027E','FY2028E'],
+  allYears:  ['FY2023','FY2024','FY2025','FY2026E','FY2027E','FY2028E'],
+
+  // Note: FY2023 includes Pluxee (B&R) pre spin-off Jan 2024
+  revenue:   [22637, 23798, 24074],  // FY23 includes Pluxee ~€4.9bn
+  costOfSales:[19810, 20902, 21134],
+  grossProfit:[2827, 2896, 2940],
+  underlyingOP:[1294, 1393, 1444],
+  adjustItems: [-285, -210, -178],
+  statOP:      [1009, 1183, 1266],
+  netFinance:  [-312, -289, -264],
+  pbt:         [697, 894, 1002],
+  tax:         [-173, -228, -258],
+  netIncome:   [524, 666, 744],
+  dna:         [622, 651, 674],
+  ebitda:      [1916, 2044, 2118],
+  eps_e:       [3.51, 4.38, 4.91], // EUR EPS
+
+  // Balance Sheet (FY23 includes Pluxee assets held for sale ~€5.3bn)
+  goodwill:   [5124, 3842, 3981],
+  intangibles:[698, 612, 587],
+  ppe:        [892, 948, 1012],
+  rightOfUse: [1541, 1625, 1698],
+  currentAssets:[6890, 5410, 5634], // FY23 includes Pluxee HFS assets
+  totalAssets:[19240, 15488, 16108],
+  grossDebt:  [4820, 4215, 3988],
+  leases:     [1541, 1625, 1698],
+  cash:       [1512, 1680, 1842],
+  netDebt:    [4849, 4160, 3844],
+  totalEquity:[5218, 4632, 4986],
+  dso:        [34, 33, 32],
+  dpo:        [40, 42, 43],
+  cashConv:   [6, 9, 11],
+
+  opCF:       [1485, 1701, 1896],
+  capex:      [-528, -571, [-614]],
+  fcf:        [957, 1130, 1282],
+
+  rev_base:   [24796, 25664, 26562],
+  rev_bull:   [25800, 27200, 28700],
+  rev_bear:   [23900, 24400, 24950],
+  ebitda_base:[2185, 2268, 2355],
+  ebitda_bull:[2290, 2440, 2590],
+  ebitda_bear:[2050, 2090, 2140],
+  fcf_base:   [1380, 1460, 1550],
+
+  gpm:        [12.5, 12.2, 12.2],
+  ebitdam:    [8.5, 8.6, 8.8],
+  ebitm:      [5.7, 5.9, 6.0],
+  netm:       [2.3, 2.8, 3.1],
+
+  nd_ebitda:  [2.53, 2.04, 1.81],
+  nd_ebitda_proj: [1.62, 1.40, 1.17],
+};
+
+// ── PEER DATA ─────────────────────────────────────────────────────────
+const PEERS = [
+  { name:'Compass Group', ticker:'CPG',   rev:46070, revGrowth:9.7,  ebitdam:9.8,  ebitm:7.1,  netm:4.4,  ndEbitda:1.31, roce:18.2, evEbitda:14.2, fcfYield:4.1,  color:'#3b82f6' },
+  { name:'Sodexo',        ticker:'SDX',   rev:26246, revGrowth:1.2,  ebitdam:8.8,  ebitm:6.0,  netm:3.1,  ndEbitda:1.81, roce:12.4, evEbitda:11.6, fcfYield:3.8,  color:'#f59e0b' },
+  { name:'Aramark',       ticker:'ARMK',  rev:20423, revGrowth:4.1,  ebitdam:9.5,  ebitm:6.8,  netm:2.2,  ndEbitda:3.18, roce:9.8,  evEbitda:12.8, fcfYield:3.2,  color:'#22c55e' },
+  { name:'Elior Group',   ticker:'ELIOR', rev:5248,  revGrowth:3.3,  ebitdam:6.2,  ebitm:3.8,  netm:0.8,  ndEbitda:4.12, roce:5.1,  evEbitda:8.4,  fcfYield:2.1,  color:'#a78bfa' },
+  { name:'ISS A/S',       ticker:'ISS',   rev:18600, revGrowth:2.1,  ebitdam:8.5,  ebitm:5.4,  netm:2.6,  ndEbitda:2.46, roce:11.2, evEbitda:10.8, fcfYield:5.6,  color:'#f87171' },
+];
+
+// ── ESG ───────────────────────────────────────────────────────────────
+const ESG = {
+  cpg: {
+    categories: ['Climate\n& Energy','Food\nSourcing','Waste &\nCircularity','Labour\nPractices','Community\nImpact','Board\nGovernance','Data\nPrivacy'],
+    scores:     [68, 72, 65, 77, 70, 78, 71],
+    color: '#3b82f6',
+  },
+  sdx: {
+    categories: ['Climate\n& Energy','Food\nSourcing','Waste &\nCircularity','Labour\nPractices','Community\nImpact','Board\nGovernance','Data\nPrivacy'],
+    scores:     [71, 78, 68, 82, 76, 74, 69],
+    color: '#f59e0b',
+  },
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════════════════ */
+let activeView = 'both';
+let activeCurrency = 'native';
+
+const CHART_COLORS = {
+  cpg:   '#3b82f6',
+  sdx:   '#f59e0b',
+  bull:  '#22c55e',
+  base:  '#3b82f6',
+  bear:  '#ef4444',
+  avg:   '#a78bfa',
+};
+
+function fmt(v, t='num', d=1) {
+  if (v == null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return v;
+  switch(t) {
+    case 'cur':  return n>=1000 ? `$${(n/1000).toFixed(1)}B` : `$${n.toFixed(0)}M`;
+    case 'curebn': return n>=1000 ? `€${(n/1000).toFixed(1)}B` : `€${n.toFixed(0)}M`;
+    case 'pct':  return `${n.toFixed(d)}%`;
+    case 'xd':   return `${n.toFixed(d)}x`;
+    case 'num':  return n.toLocaleString(undefined,{maximumFractionDigits:0});
+    default:     return n.toFixed(d);
+  }
+}
+
+function pctChg(a,b) {
+  if (!a||!b) return null;
+  return ((b-a)/Math.abs(a)*100).toFixed(1);
+}
+
+function chgHtml(a,b,inv=false) {
+  const c = pctChg(a,b);
+  if (!c) return '';
+  const good = inv ? c<0 : c>=0;
+  return `<span class="${good?'pos':'neg'}">${c>=0?'+':''}${c}%</span>`;
+}
+
+function mkChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const existing = Chart.getChart(el);
+  if (existing) existing.destroy();
+  return new Chart(el.getContext('2d'), cfg);
+}
+
+const gridColor = 'rgba(255,255,255,0.06)';
+const tickColor = '#64748b';
+const baseOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode:'index', intersect:false },
+  plugins: {
+    legend: { position:'top', labels:{ color:'#94a3b8', usePointStyle:true, padding:14, font:{size:11} } },
+    tooltip: { backgroundColor:'#1a1d27', borderColor:'#2e3248', borderWidth:1, titleColor:'#e2e8f0', bodyColor:'#94a3b8', padding:10 }
+  },
+  scales: {
+    x: { grid:{ color:gridColor }, ticks:{ color:tickColor, font:{size:11} } },
+    y: { grid:{ color:gridColor }, ticks:{ color:tickColor, font:{size:11} } }
+  }
+};
+
+function deepMerge(a,b) {
+  const res = Object.assign({},a);
+  for (const k in b) {
+    if (b[k] && typeof b[k]==='object' && !Array.isArray(b[k])) {
+      res[k] = deepMerge(a[k]||{}, b[k]);
+    } else { res[k]=b[k]; }
+  }
+  return res;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   KPI CARDS
+═══════════════════════════════════════════════════════════════════════ */
+function renderKPIs() {
+  const cpg_rev = CPG.revenue[2], cpg_rev_1 = CPG.revenue[1];
+  const sdx_rev = SDX.revenue[2], sdx_rev_1 = SDX.revenue[1];
+  const kpis = [
+    {
+      label:'CPG Revenue (FY2025)', val:`$${(cpg_rev/1000).toFixed(1)}B`,
+      sub:'USD — FY ended Sep 30, 2025',
+      chg:pctChg(cpg_rev_1,cpg_rev), co:'cpg',
+    },
+    {
+      label:'SDX Revenue (FY2025)', val:`€${(sdx_rev/1000).toFixed(1)}B`,
+      sub:'EUR — FY ended Aug 31, 2025',
+      chg:pctChg(sdx_rev_1,sdx_rev), co:'sdx',
+    },
+    {
+      label:'CPG EBITDA Margin', val:`${CPG.ebitdam[2]}%`,
+      sub:`EBITDA $${(CPG.ebitda[2]/1000).toFixed(1)}B`,
+      chg:pctChg(CPG.ebitdam[1],CPG.ebitdam[2]), co:'cpg',
+    },
+    {
+      label:'SDX EBITDA Margin', val:`${SDX.ebitdam[2]}%`,
+      sub:`EBITDA €${(SDX.ebitda[2]/1000).toFixed(1)}B`,
+      chg:pctChg(SDX.ebitdam[1],SDX.ebitdam[2]), co:'sdx',
+    },
+    {
+      label:'CPG Net Debt/EBITDA', val:`${CPG.nd_ebitda[2]}x`,
+      sub:`Net Debt $${(CPG.netDebt[2]/1000).toFixed(1)}B`,
+      chg:pctChg(CPG.nd_ebitda[1],CPG.nd_ebitda[2]), inv:true, co:'cpg',
+    },
+    {
+      label:'SDX Net Debt/EBITDA', val:`${SDX.nd_ebitda[2]}x`,
+      sub:`Net Debt €${(SDX.netDebt[2]/1000).toFixed(1)}B`,
+      chg:pctChg(SDX.nd_ebitda[1],SDX.nd_ebitda[2]), inv:true, co:'sdx',
+    },
+    {
+      label:'CPG Free Cash Flow', val:`$${(CPG.fcf[2]/1000).toFixed(1)}B`,
+      sub:'FY2025 Operating CF – CapEx',
+      chg:pctChg(CPG.fcf[1],CPG.fcf[2]), co:'cpg',
+    },
+    {
+      label:'SDX Free Cash Flow', val:`€${(SDX.fcf[2]/1000).toFixed(1)}B`,
+      sub:'FY2025 Operating CF – CapEx',
+      chg:pctChg(SDX.fcf[1],SDX.fcf[2]), co:'sdx',
+    },
+  ];
+
+  const row = document.getElementById('kpi-row');
+  row.innerHTML = kpis.map(k => {
+    const skip = (activeView==='cpg' && k.co==='sdx') || (activeView==='sdx' && k.co==='cpg');
+    if (skip) return '';
+    const dir = k.chg>=0 ? 'pos':'neg';
+    const good = k.inv ? (k.chg<=0?'pos':'neg') : dir;
+    return `<div class="kpi-card ${k.co}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}</div>
+      <div class="kpi-sub">${k.sub}</div>
+      <div class="kpi-change ${good}">
+        ${k.chg>=0?'▲':'▼'} ${Math.abs(k.chg).toFixed(1)}% YoY
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SUMMARY TABLE
+═══════════════════════════════════════════════════════════════════════ */
+function renderSummaryTable() {
+  const rows = [
+    { label:'Revenue', cpg:[...CPG.revenue,...CPG.rev_base], sdx:[...SDX.revenue,...SDX.rev_base], fmt:'num', cpgCur:'$', sdxCur:'€' },
+    { label:'EBITDA',  cpg:[...CPG.ebitda,...CPG.ebitda_base], sdx:[...SDX.ebitda,...SDX.ebitda_base], fmt:'num', cpgCur:'$', sdxCur:'€' },
+    { label:'EBITDA Margin', cpg:[...CPG.ebitdam,10.0,10.4,10.8], sdx:[...SDX.ebitdam,9.1,9.4,9.7], fmt:'pct' },
+    { label:'Net Income', cpg:[...CPG.netIncome,2180,2410,2700], sdx:[...SDX.netIncome,820,920,1040], fmt:'num', cpgCur:'$', sdxCur:'€' },
+    { label:'Net Debt/EBITDA', cpg:[...CPG.nd_ebitda,...CPG.nd_ebitda_proj], sdx:[...SDX.nd_ebitda,...SDX.nd_ebitda_proj], fmt:'xd' },
+    { label:'FCF',     cpg:[...CPG.fcf,...CPG.fcf_base], sdx:[...SDX.fcf,...SDX.fcf_base], fmt:'num', cpgCur:'$', sdxCur:'€' },
+    { label:'EBIT Margin',    cpg:[...CPG.ebitm,7.4,7.7,8.0], sdx:[...SDX.ebitm,6.2,6.4,6.6], fmt:'pct' },
+    { label:'Net Margin',     cpg:[...CPG.netm,4.6,4.8,5.0], sdx:[...SDX.netm,3.3,3.5,3.8], fmt:'pct' },
+  ];
+
+  const isProj = [false,false,false,true,true,true];
+  const tbody = document.getElementById('summary-table-body');
+  tbody.innerHTML = rows.flatMap(r => {
+    const cpgRow = `<tr>
+      <td>${r.label}</td>
+      <td><span class="co-cpg">CPG</span></td>
+      ${r.cpg.map((v,i)=>{
+        const pClass = isProj[i]?'proj':'';
+        const pre = r.cpgCur||'';
+        return `<td class="${pClass}">${pre}${r.fmt==='pct'?fmt(v,'pct'):r.fmt==='xd'?fmt(v,'xd'):v.toLocaleString()}</td>`;
+      }).join('')}
+    </tr>`;
+    const sdxRow = `<tr>
+      <td></td>
+      <td><span class="co-sdx">SDX</span></td>
+      ${r.sdx.map((v,i)=>{
+        const pClass = isProj[i]?'proj':'';
+        const pre = r.sdxCur||'';
+        return `<td class="${pClass}">${pre}${r.fmt==='pct'?fmt(v,'pct'):r.fmt==='xd'?fmt(v,'xd'):v.toLocaleString()}</td>`;
+      }).join('')}
+    </tr>`;
+    return [cpgRow, sdxRow];
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERVIEW CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildOverviewCharts() {
+  // Revenue with forecast shading
+  const allLabels = ['FY2023','FY2024','FY2025','FY2026E','FY2027E','FY2028E'];
+  const cpgRevAll = [...CPG.revenue, ...CPG.rev_base];
+  const sdxRevAll = [...SDX.revenue, ...SDX.rev_base];
+
+  mkChart('chart-revenue', {
+    type:'line',
+    data:{
+      labels: allLabels,
+      datasets:[
+        {
+          label:'CPG Revenue ($m)', data:cpgRevAll,
+          borderColor:CHART_COLORS.cpg, backgroundColor:CHART_COLORS.cpg+'22',
+          borderWidth:2.5, fill:false, tension:0.3, pointRadius:[4,4,4,5,5,5],
+          pointStyle:['circle','circle','circle','triangle','triangle','triangle'],
+          borderDash: [0,0,0,5,5,5],
+          segment:{ borderDash: ctx => ctx.p0DataIndex>=2 ? [6,4] : [] }
+        },
+        {
+          label:'SDX Revenue (€m)', data:sdxRevAll,
+          borderColor:CHART_COLORS.sdx, backgroundColor:CHART_COLORS.sdx+'22',
+          borderWidth:2.5, fill:false, tension:0.3, pointRadius:[4,4,4,5,5,5],
+          segment:{ borderDash: ctx => ctx.p0DataIndex>=2 ? [6,4] : [] }
+        },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      plugins:{ tooltip:{ callbacks:{
+        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+      }}},
+      scales:{
+        y:{ ticks:{ callback: v => v>=1000?`${(v/1000).toFixed(0)}K`:v } }
+      }
+    })
+  });
+
+  // EBITDA Margin
+  mkChart('chart-ebitda-margin', {
+    type:'bar',
+    data:{
+      labels: allLabels,
+      datasets:[
+        { label:'CPG EBITDA Mg %', data:[...CPG.ebitdam,10.0,10.4,10.8],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.cpg+'88':CHART_COLORS.cpg+'cc'), borderRadius:4 },
+        { label:'SDX EBITDA Mg %', data:[...SDX.ebitdam,9.1,9.4,9.7],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.sdx+'88':CHART_COLORS.sdx+'cc'), borderRadius:4 },
+        { label:'Industry Avg', data:[8.2,8.2,8.2,8.2,8.2,8.2],
+          type:'line', borderColor:CHART_COLORS.avg, borderDash:[6,3], borderWidth:1.5,
+          pointRadius:0, fill:false }
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback: v=>`${v}%` } } }
+    })
+  });
+
+  // Leverage
+  mkChart('chart-leverage', {
+    type:'bar',
+    data:{
+      labels: allLabels,
+      datasets:[
+        { label:'CPG ND/EBITDA', data:[...CPG.nd_ebitda,...CPG.nd_ebitda_proj],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.cpg+'66':CHART_COLORS.cpg+'bb'), borderRadius:4 },
+        { label:'SDX ND/EBITDA', data:[...SDX.nd_ebitda,...SDX.nd_ebitda_proj],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.sdx+'66':CHART_COLORS.sdx+'bb'), borderRadius:4 },
+        { label:'2.0x threshold', data:[2,2,2,2,2,2],
+          type:'line', borderColor:'#ef4444', borderDash:[4,4], borderWidth:1.5,
+          pointRadius:0, fill:false }
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback: v=>`${v}x` }, max:3.5 } }
+    })
+  });
+
+  // FCF
+  mkChart('chart-fcf', {
+    type:'bar',
+    data:{
+      labels: allLabels,
+      datasets:[
+        { label:'CPG FCF ($m)', data:[...CPG.fcf,...CPG.fcf_base],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.cpg+'66':CHART_COLORS.cpg+'cc'), borderRadius:4 },
+        { label:'SDX FCF (€m)', data:[...SDX.fcf,...SDX.fcf_base],
+          backgroundColor: allLabels.map((_,i)=>i>=3?CHART_COLORS.sdx+'66':CHART_COLORS.sdx+'cc'), borderRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback: v => v>=1000?`${(v/1000).toFixed(1)}K`:v } } }
+    })
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INCOME STATEMENT CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildISCharts() {
+  // CPG IS
+  mkChart('chart-cpg-is', {
+    type:'bar',
+    data:{
+      labels: CPG.years,
+      datasets:[
+        { label:'Revenue ($m)', data:CPG.revenue, backgroundColor:'#3b82f644', borderRadius:4, yAxisID:'y' },
+        { label:'Underlying OP ($m)', data:CPG.underlyingOP, backgroundColor:'#3b82f6cc', borderRadius:4, yAxisID:'y' },
+        { label:'EBITDA Margin %', data:CPG.ebitdam, type:'line', borderColor:'#22c55e',
+          yAxisID:'y2', fill:false, tension:0.3, borderWidth:2, pointRadius:4 }
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{
+        y:{ position:'left', ticks:{ callback:v=>`$${(v/1000).toFixed(0)}K` } },
+        y2:{ position:'right', grid:{display:false}, ticks:{ callback:v=>`${v}%` }, max:16 }
+      }
+    })
+  });
+
+  // SDX IS
+  mkChart('chart-sdx-is', {
+    type:'bar',
+    data:{
+      labels: SDX.years,
+      datasets:[
+        { label:'Revenue (€m)', data:SDX.revenue, backgroundColor:'#f59e0b44', borderRadius:4, yAxisID:'y' },
+        { label:'Underlying OP (€m)', data:SDX.underlyingOP, backgroundColor:'#f59e0bcc', borderRadius:4, yAxisID:'y' },
+        { label:'EBITDA Margin %', data:SDX.ebitdam, type:'line', borderColor:'#22c55e',
+          yAxisID:'y2', fill:false, tension:0.3, borderWidth:2, pointRadius:4 }
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{
+        y:{ position:'left', ticks:{ callback:v=>`€${(v/1000).toFixed(0)}K` } },
+        y2:{ position:'right', grid:{display:false}, ticks:{ callback:v=>`${v}%` }, max:16 }
+      }
+    })
+  });
+
+  // Margin waterfall (horizontal bar FY2025)
+  mkChart('chart-margins', {
+    type:'bar',
+    data:{
+      labels:['Gross Margin','EBITDA Margin','EBIT Margin','Net Margin'],
+      datasets:[
+        { label:'CPG FY2025', data:[CPG.gpm[2],CPG.ebitdam[2],CPG.ebitm[2],CPG.netm[2]],
+          backgroundColor:'#3b82f6cc', borderRadius:4 },
+        { label:'SDX FY2025', data:[SDX.gpm[2],SDX.ebitdam[2],SDX.ebitm[2],SDX.netm[2]],
+          backgroundColor:'#f59e0bcc', borderRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      indexAxis:'y',
+      scales:{
+        x:{ ticks:{ callback:v=>`${v}%` } },
+        y:{ grid:{display:false} }
+      }
+    })
+  });
+
+  // EPS & DPS
+  mkChart('chart-eps', {
+    type:'bar',
+    data:{
+      labels: CPG.years,
+      datasets:[
+        { label:'EPS (pence)', data:CPG.eps_p, backgroundColor:'#3b82f6bb', borderRadius:4 },
+        { label:'DPS (pence)', data:CPG.dps_p, backgroundColor:'#22c55ebb', borderRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback:v=>`${v}p` } } }
+    })
+  });
+
+  // Anomalies
+  const anomalies = [
+    { sev:'high',   title:'SDX FY2023 Revenue Inflated', body:'Pluxee (Benefits & Rewards) contributes ~€4.9bn to FY2023 revenue. Post-spinoff Jan 2024, organic FY2025 revenue growth is ~4.3% vs reported 1.2% CAGR.', tag:'w' },
+    { sev:'high',   title:'CPG Currency Restatement', body:'FY2023 CPG originally reported in GBP. USD figures ($37.9bn) sourced from FY2024 Annual Report restated comparatives.', tag:'w' },
+    { sev:'medium', title:'CPG Margin Expansion Trend', body:'CPG underlying OP margin improved from 6.7% (FY2023) to 7.1% (FY2025) — a 40bps improvement driven by post-COVID recovery and operating leverage on fixed overheads.', tag:'e' },
+    { sev:'low',    title:'SDX Restructuring Charges Declining', body:'SDX underlying adjustments fell from €285m (FY2023) to €178m (FY2025), indicating structural improvements post-Pluxee separation.', tag:'e' },
+    { sev:'low',    title:'CPG Net Debt Rapid Deleveraging', body:'CPG net debt fell from $7.5bn (FY2023) to $5.9bn (FY2025) while EBITDA grew 25%. ND/EBITDA dropped from 2.07x to 1.31x — ahead of management guidance.', tag:'e' },
+    { sev:'medium', title:'SDX FCF Conversion Improving', body:'SDX FCF/EBITDA improved from 50% (FY2023) to 61% (FY2025) as working capital headwinds from Pluxee separation normalised.', tag:'w' },
+  ];
+  const sevClass = { high:'', medium:'medium', low:'low', info:'info' };
+  document.getElementById('anomaly-grid').innerHTML = anomalies.map(a =>
+    `<div class="risk-item ${sevClass[a.sev]}">
+      <div class="risk-title"><span class="tag tag-${a.tag}">${a.sev.toUpperCase()}</span> &nbsp;${a.title}</div>
+      <div class="risk-body">${a.body}</div>
+    </div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BALANCE SHEET CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildBSCharts() {
+  const doughOpts = deepMerge(baseOpts, {
+    plugins:{ legend:{ position:'right' } },
+    scales: undefined,
+  });
+  delete doughOpts.scales;
+
+  mkChart('chart-cpg-assets', {
+    type:'doughnut',
+    data:{
+      labels:['Goodwill','Intangibles','PP&E','Right-of-Use','Current Assets','Other'],
+      datasets:[{
+        data:[CPG.goodwill[2], CPG.intangibles[2], CPG.ppe[2], CPG.rightOfUse[2], CPG.currentAssets[2],
+              CPG.totalAssets[2]-CPG.goodwill[2]-CPG.intangibles[2]-CPG.ppe[2]-CPG.rightOfUse[2]-CPG.currentAssets[2]],
+        backgroundColor:['#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#1e3a5f'],
+        borderColor:'#1a1d27', borderWidth:2
+      }]
+    },
+    options:{ ...doughOpts, responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{ legend:{ position:'right', labels:{color:'#94a3b8',font:{size:11},padding:12} },
+        tooltip:{ callbacks:{ label: ctx=>{
+          const t=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return `${ctx.label}: $${ctx.parsed.toLocaleString()}m (${((ctx.parsed/t)*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+
+  mkChart('chart-sdx-assets', {
+    type:'doughnut',
+    data:{
+      labels:['Goodwill','Intangibles','PP&E','Right-of-Use','Current Assets','Other'],
+      datasets:[{
+        data:[SDX.goodwill[2], SDX.intangibles[2], SDX.ppe[2], SDX.rightOfUse[2], SDX.currentAssets[2],
+              SDX.totalAssets[2]-SDX.goodwill[2]-SDX.intangibles[2]-SDX.ppe[2]-SDX.rightOfUse[2]-SDX.currentAssets[2]],
+        backgroundColor:['#f59e0b','#fbbf24','#fcd34d','#fde68a','#fef3c7','#3d2c10'],
+        borderColor:'#1a1d27', borderWidth:2
+      }]
+    },
+    options:{ ...doughOpts, responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{ legend:{ position:'right', labels:{color:'#94a3b8',font:{size:11},padding:12} },
+        tooltip:{ callbacks:{ label: ctx=>{
+          const t=ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return `${ctx.label}: €${ctx.parsed.toLocaleString()}m (${((ctx.parsed/t)*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+
+  // Net debt composition
+  mkChart('chart-debt', {
+    type:'bar',
+    data:{
+      labels:['CPG FY23','CPG FY24','CPG FY25','SDX FY23','SDX FY24','SDX FY25'],
+      datasets:[
+        { label:'Gross Debt', data:[CPG.grossDebt[0],CPG.grossDebt[1],CPG.grossDebt[2],
+            SDX.grossDebt[0],SDX.grossDebt[1],SDX.grossDebt[2]],
+          backgroundColor:'#ef444488', borderRadius:4 },
+        { label:'Lease Liabilities', data:[CPG.leases[0],CPG.leases[1],CPG.leases[2],
+            SDX.leases[0],SDX.leases[1],SDX.leases[2]],
+          backgroundColor:'#f59e0b88', borderRadius:4 },
+        { label:'Cash (negative)', data:[-CPG.cash[0],-CPG.cash[1],-CPG.cash[2],
+            -SDX.cash[0],-SDX.cash[1],-SDX.cash[2]],
+          backgroundColor:'#22c55e88', borderRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{
+        x:{ stacked:true },
+        y:{ stacked:true, ticks:{ callback:v=>`${(v/1000).toFixed(1)}K` } }
+      }
+    })
+  });
+
+  // Working capital
+  mkChart('chart-wc', {
+    type:'bar',
+    data:{
+      labels: ['FY2023','FY2024','FY2025'],
+      datasets:[
+        { label:'CPG DSO (days)', data:CPG.dso, backgroundColor:'#3b82f6cc', borderRadius:4 },
+        { label:'SDX DSO (days)', data:SDX.dso, backgroundColor:'#f59e0bcc', borderRadius:4 },
+        { label:'CPG DPO (days)', data:CPG.dpo, backgroundColor:'#3b82f666', borderRadius:4 },
+        { label:'SDX DPO (days)', data:SDX.dpo, backgroundColor:'#f59e0b66', borderRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{ scales:{ y:{ ticks:{ callback:v=>`${v}d` } } } })
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORECAST & SCENARIO CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildForecastCharts() {
+  const fLabels = ['FY2025','FY2026E','FY2027E','FY2028E'];
+
+  mkChart('chart-cpg-scenario',{
+    type:'line',
+    data:{
+      labels: fLabels,
+      datasets:[
+        { label:'Bull', data:[CPG.revenue[2],...CPG.rev_bull],
+          borderColor:CHART_COLORS.bull, fill:false, tension:0.3, borderWidth:2, pointRadius:4 },
+        { label:'Base', data:[CPG.revenue[2],...CPG.rev_base],
+          borderColor:CHART_COLORS.base, fill:false, tension:0.3, borderWidth:2.5, pointRadius:5 },
+        { label:'Bear', data:[CPG.revenue[2],...CPG.rev_bear],
+          borderColor:CHART_COLORS.bear, fill:false, tension:0.3, borderWidth:2, pointRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback:v=>`$${(v/1000).toFixed(0)}K` } } }
+    })
+  });
+
+  mkChart('chart-sdx-scenario',{
+    type:'line',
+    data:{
+      labels: fLabels,
+      datasets:[
+        { label:'Bull', data:[SDX.revenue[2],...SDX.rev_bull],
+          borderColor:CHART_COLORS.bull, fill:false, tension:0.3, borderWidth:2, pointRadius:4 },
+        { label:'Base', data:[SDX.revenue[2],...SDX.rev_base],
+          borderColor:CHART_COLORS.sdx, fill:false, tension:0.3, borderWidth:2.5, pointRadius:5 },
+        { label:'Bear', data:[SDX.revenue[2],...SDX.rev_bear],
+          borderColor:CHART_COLORS.bear, fill:false, tension:0.3, borderWidth:2, pointRadius:4 },
+      ]
+    },
+    options: deepMerge(baseOpts,{
+      scales:{ y:{ ticks:{ callback:v=>`€${(v/1000).toFixed(0)}K` } } }
+    })
+  });
+
+  // Scenario table
+  const scenarios = [
+    { lbl:'Bull', cls:'s-bull', cpgCagr:'7.4%', cpgRev:'$61.9B', cpgMg:'11.5%', sdxCagr:'6.2%', sdxRev:'€28.7B', sdxMg:'9.8%', key:'AI-driven upsell, contract wins, food inflation tail' },
+    { lbl:'Base', cls:'s-base', cpgCagr:'5.6%', cpgRev:'$57.2B', cpgMg:'10.8%', sdxCagr:'3.3%', sdxRev:'€26.6B', sdxMg:'9.7%', key:'Organic volume growth, modest margin expansion' },
+    { lbl:'Bear', cls:'s-bear', cpgCagr:'2.3%', cpgRev:'$53.7B', cpgMg:'9.5%',  sdxCagr:'1.2%', sdxRev:'€24.9B', sdxMg:'8.8%', key:'Macro slowdown, cost inflation, contract losses' },
+  ];
+  document.getElementById('scenario-table').innerHTML = scenarios.map(s =>
+    `<tr>
+      <td><span class="scenario-label ${s.cls}">${s.lbl}</span></td>
+      <td>${s.cpgCagr}</td><td>${s.cpgRev}</td><td>${s.cpgMg}</td>
+      <td>${s.sdxCagr}</td><td>${s.sdxRev}</td><td>${s.sdxMg}</td>
+      <td style="color:var(--text-dim);font-size:11px;">${s.key}</td>
+    </tr>`
+  ).join('');
+
+  // Sensitivity heatmap (CPG EBITDA FY2028E)
+  const revGrowths = [3,4,5,6,7,8];
+  const margins    = [9.5, 10.0, 10.5, 11.0, 11.5];
+  const baseRev = CPG.revenue[2];
+
+  let html = `<table style="border-collapse:collapse;font-size:11px;width:100%;">
+    <thead><tr>
+      <th style="padding:6px 10px;background:var(--surface2);color:var(--text-dim);text-align:left;">EBITDA Mg →<br>Rev CAGR ↓</th>
+      ${margins.map(m=>`<th style="padding:6px 10px;background:var(--surface2);color:var(--text-dim);text-align:right;">${m}%</th>`).join('')}
+    </tr></thead><tbody>`;
+  revGrowths.forEach(g => {
+    html += `<tr>`;
+    html += `<td style="padding:6px 10px;background:var(--surface2);color:var(--text-dim);font-weight:600;">${g}%</td>`;
+    margins.forEach(m => {
+      const rev2028 = baseRev * Math.pow(1+g/100,3);
+      const ebitda  = rev2028 * m/100;
+      const isBase  = g===6 && m===10.5;
+      const intensity = Math.min(1,(ebitda - 4800)/2200);
+      const r = Math.round(59 + intensity*(34-59));
+      const gn = Math.round(130 + intensity*(197-130));
+      const b = Math.round(246 + intensity*(94-246));
+      const bg = isBase ? '#1e3a5f' : `rgba(${r},${gn},${b},0.22)`;
+      const border = isBase ? '2px solid #3b82f6' : '1px solid var(--border)';
+      html += `<td style="padding:6px 10px;text-align:right;background:${bg};border:${border};font-weight:${isBase?700:400};">
+        $${(ebitda/1000).toFixed(1)}B${isBase?' ★':''}
+      </td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById('sensitivity-table').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PEER BENCHMARKING CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildPeerCharts() {
+  // Bubble: revenue growth vs EBITDA margin, size = revenue
+  mkChart('chart-bubble', {
+    type:'bubble',
+    data:{
+      datasets: PEERS.map(p => ({
+        label: p.ticker,
+        data: [{ x:p.revGrowth, y:p.ebitdam, r: Math.sqrt(p.rev/700) }],
+        backgroundColor: p.color+'99',
+        borderColor: p.color,
+        borderWidth:2,
+      }))
+    },
+    options: deepMerge(baseOpts,{
+      scales:{
+        x:{ title:{ display:true, text:'Revenue Growth %', color:tickColor }, ticks:{ callback:v=>`${v}%` } },
+        y:{ title:{ display:true, text:'EBITDA Margin %', color:tickColor }, ticks:{ callback:v=>`${v}%` }, min:4 }
+      },
+      plugins:{ tooltip:{ callbacks:{ label: ctx =>{
+        const p = PEERS.find(p=>p.ticker===ctx.dataset.label);
+        return [`${p.name}`, `Rev Growth: ${p.revGrowth}%`, `EBITDA Mg: ${p.ebitdam}%`, `Revenue: $${(p.rev/1000).toFixed(0)}B`];
+      }}}}
+    })
+  });
+
+  // EV/EBITDA vs ND/EBITDA
+  mkChart('chart-peer-val', {
+    type:'bubble',
+    data:{
+      datasets: PEERS.map(p => ({
+        label: p.ticker,
+        data: [{ x:p.ndEbitda, y:p.evEbitda, r: p.fcfYield*3 }],
+        backgroundColor: p.color+'99',
+        borderColor: p.color,
+        borderWidth:2,
+      }))
+    },
+    options: deepMerge(baseOpts,{
+      scales:{
+        x:{ title:{ display:true, text:'Net Debt / EBITDA', color:tickColor }, ticks:{ callback:v=>`${v}x` } },
+        y:{ title:{ display:true, text:'EV / EBITDA', color:tickColor }, ticks:{ callback:v=>`${v}x` }, min:6 }
+      },
+      plugins:{ tooltip:{ callbacks:{ label: ctx =>{
+        const p = PEERS.find(p=>p.ticker===ctx.dataset.label);
+        return [`${p.name}`, `EV/EBITDA: ${p.evEbitda}x`, `ND/EBITDA: ${p.ndEbitda}x`, `FCF Yield: ${p.fcfYield}%`];
+      }}}}
+    })
+  });
+
+  // Peer table
+  const tbody = document.getElementById('peer-table');
+  tbody.innerHTML = PEERS.map((p,i) => {
+    const isCPG = p.ticker==='CPG', isSDX = p.ticker==='SDX';
+    const rowCls = isCPG?'style="background:rgba(59,130,246,0.08)"':isSDX?'style="background:rgba(245,158,11,0.08)"':'';
+    return `<tr ${rowCls}>
+      <td><span style="color:${p.color};font-weight:700;">${p.ticker}</span> &nbsp;<span style="color:var(--text-dim);font-size:11px;">${p.name}</span></td>
+      <td>$${(p.rev/1000).toFixed(1)}B</td>
+      <td class="${p.revGrowth>=6?'pos':p.revGrowth>=3?'':'neg'}">${p.revGrowth}%</td>
+      <td class="${p.ebitdam>=9?'pos':p.ebitdam>=7?'':'neg'}">${p.ebitdam}%</td>
+      <td>${p.ebitm}%</td>
+      <td>${p.netm}%</td>
+      <td class="${p.ndEbitda<=2?'pos':p.ndEbitda<=3?'':'neg'}">${p.ndEbitda}x</td>
+      <td>${p.roce}%</td>
+      <td>${p.evEbitda}x</td>
+      <td class="${p.fcfYield>=4?'pos':''}">${p.fcfYield}%</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ESG & RISK CHARTS
+═══════════════════════════════════════════════════════════════════════ */
+function buildESGCharts() {
+  const radarOpts = {
+    responsive:true, maintainAspectRatio:false,
+    scales:{ r:{ beginAtZero:true, max:100, ticks:{ stepSize:20, color:tickColor, font:{size:10} },
+      grid:{ color:gridColor }, pointLabels:{ color:'#94a3b8', font:{size:10} } }},
+    plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#1a1d27', borderColor:'#2e3248', borderWidth:1 } }
+  };
+
+  mkChart('chart-esg-cpg', {
+    type:'radar',
+    data:{
+      labels:['Climate & Energy','Food Sourcing','Waste','Labour','Community','Governance','Data Privacy'],
+      datasets:[{ label:'CPG', data:ESG.cpg.scores,
+        borderColor:CHART_COLORS.cpg, backgroundColor:CHART_COLORS.cpg+'33',
+        borderWidth:2, pointRadius:3 }]
+    },
+    options: radarOpts
+  });
+
+  mkChart('chart-esg-sdx', {
+    type:'radar',
+    data:{
+      labels:['Climate & Energy','Food Sourcing','Waste','Labour','Community','Governance','Data Privacy'],
+      datasets:[{ label:'SDX', data:ESG.sdx.scores,
+        borderColor:CHART_COLORS.sdx, backgroundColor:CHART_COLORS.sdx+'33',
+        borderWidth:2, pointRadius:3 }]
+    },
+    options: radarOpts
+  });
+
+  // ESG compare bar
+  const esgLabels = ['Climate','Food Sourcing','Waste','Labour','Community','Governance','Data Privacy'];
+  const indAvg = [66,68,63,72,65,70,65];
+  mkChart('chart-esg-compare', {
+    type:'bar',
+    data:{
+      labels: esgLabels,
+      datasets:[
+        { label:'CPG', data:ESG.cpg.scores, backgroundColor:'#3b82f6cc', borderRadius:3 },
+        { label:'SDX', data:ESG.sdx.scores, backgroundColor:'#f59e0bcc', borderRadius:3 },
+        { label:'Ind. Avg', data:indAvg, type:'line', borderColor:CHART_COLORS.avg,
+          borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false }
+      ]
+    },
+    options: deepMerge(baseOpts,{ scales:{ y:{ max:100, ticks:{ callback:v=>`${v}` } } } })
+  });
+
+  // ESG detail bars
+  const cpgCol = CHART_COLORS.cpg;
+  const sdxCol = CHART_COLORS.sdx;
+  const categories = ['Climate & Energy','Food Sourcing','Waste & Circularity','Labour Practices','Community Impact','Board Governance','Data Privacy'];
+
+  document.getElementById('esg-bars').innerHTML = ['CPG','SDX'].map(co => {
+    const scores = co==='CPG' ? ESG.cpg.scores : ESG.sdx.scores;
+    const col = co==='CPG' ? cpgCol : sdxCol;
+    return `<div class="esg-col">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:${col};">${co}</div>
+      ${categories.map((c,i)=>`
+        <div class="esg-row">
+          <span class="esg-label">${c}</span>
+          <div class="esg-bar-bg"><div class="esg-bar" style="width:${scores[i]}%;background:${col};"></div></div>
+          <span class="esg-score" style="color:${col};">${scores[i]}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+
+  // Risk register
+  const risks = [
+    { sev:'', title:'Food Safety & Quality', body:'Regulatory breach → contract loss risk. CPG has 200+ SOPs; SDX scored higher in recent audits.', cls:'' },
+    { sev:'', title:'Labour Inflation', body:'~60% cost base is labour. Minimum wage increases in UK/EU could compress margins 50–100bps.', cls:'medium' },
+    { sev:'', title:'AI Disruption', body:'Both cos investing in AI menu optimisation & demand forecasting. CPG ahead with Compass Digital Labs.', cls:'info' },
+    { sev:'', title:'SDX Pluxee Comparability', body:'FY2023 SDX figures not fully like-for-like. Organic growth analysis requires adjusted revenue base.', cls:'medium' },
+    { sev:'', title:'FX Exposure', body:'CPG ~35% USD, 30% EUR, 15% GBP. SDX ~55% EUR. USD strength benefits CPG translation.', cls:'low' },
+    { sev:'', title:'Climate Regulation', body:'EU CSRD + UK TCFD mandatory disclosure. SDX scores higher on scope 3 reduction commitments.', cls:'info' },
+  ];
+  document.getElementById('risk-grid').innerHTML = risks.map(r =>
+    `<div class="risk-item ${r.cls}">
+      <div class="risk-title">${r.title}</div>
+      <div class="risk-body">${r.body}</div>
+    </div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAB / VIEW CONTROLS
+═══════════════════════════════════════════════════════════════════════ */
+const chartBuilders = {
+  overview: buildOverviewCharts,
+  income:   buildISCharts,
+  balance:  buildBSCharts,
+  forecast: buildForecastCharts,
+  peer:     buildPeerCharts,
+  esg:      buildESGCharts,
+};
+const builtTabs = new Set();
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', t.textContent.trim().toLowerCase().startsWith(id.slice(0,3))));
+  // fix for tabs with multiple words
+  document.querySelectorAll('.tab').forEach(t => {
+    const match = ['overview','income','balance','forecast','peer','esg'].find(x => t.textContent.trim().toLowerCase().includes(x.toLowerCase().slice(0,4)));
+    t.classList.toggle('active', match===id);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id===`panel-${id}`));
+  if (!builtTabs.has(id)) {
+    builtTabs.add(id);
+    if (chartBuilders[id]) chartBuilders[id]();
+    if (id==='overview') renderSummaryTable();
+  }
+}
+
+function setView(v) {
+  activeView = v;
+  ['both','cpg','sdx'].forEach(x => {
+    document.getElementById(`btn-${x}`).className = 'btn-toggle' + (x===v?' active':'');
+  });
+  renderKPIs();
+}
+
+function setCurrency(v) {
+  activeCurrency = v;
+  // For simplicity, note conversion in the tooltip; full re-render in a production build would multiply SDX figures
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════════ */
+renderKPIs();
+buildOverviewCharts();
+renderSummaryTable();
+builtTabs.add('overview');
+</script>
+</body>
+</html>
